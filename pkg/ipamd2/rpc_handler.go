@@ -8,16 +8,27 @@ import (
 )
 
 type rpcHandler struct {
-	version string
+	version   string
+	innerIpam Ipam
 }
 
 func (s *rpcHandler) AddNetwork(ctx context.Context, request *rpc.AddNetworkRequest) (*rpc.AddNetworkReply, error) {
 	fmt.Printf("AddNetwork Requested: %v\n", request)
 
-	//lastIp := rand.IntnRange(200, 240)
+	ipv4, err := s.innerIpam.LeaseIp(&IpamKey{
+		ContainerId: request.ContainerID,
+		IfName:      request.IfName,
+	})
+	if err != nil {
+		fmt.Printf("LeaseIp Failed, err = %s\n", err.Error())
+		return &rpc.AddNetworkReply{
+			Success: false,
+		}, nil
+	}
+
 	return &rpc.AddNetworkReply{
 		Success:         true,
-		IPv4Addr:        fmt.Sprintf("100.66.5.241"),
+		IPv4Addr:        ipv4.String(),
 		DeviceNumber:    0,
 		UseExternalSNAT: true,
 		VPCv4CIDRs:      []string{"100.66.0.0/19"},
@@ -28,10 +39,20 @@ func (s *rpcHandler) AddNetwork(ctx context.Context, request *rpc.AddNetworkRequ
 func (s *rpcHandler) DelNetwork(ctx context.Context, request *rpc.DelNetworkRequest) (*rpc.DelNetworkReply, error) {
 	fmt.Printf("DelNetwork Requested: %v\n", request)
 
-	//lastIp := rand.IntnRange(200, 240)
+	ipv4, err := s.innerIpam.LeaseIp(&IpamKey{
+		ContainerId: request.ContainerID,
+		IfName:      request.IfName,
+	})
+	if err != nil {
+		fmt.Printf("LeaseIp Failed, err = %s\n", err.Error())
+		return &rpc.DelNetworkReply{
+			Success: false,
+		}, nil
+	}
+
 	return &rpc.DelNetworkReply{
 		Success:      true,
-		IPv4Addr:     fmt.Sprintf("100.66.5.241/19"),
+		IPv4Addr:     ipv4.String(),
 		DeviceNumber: 0,
 	}, nil
 }

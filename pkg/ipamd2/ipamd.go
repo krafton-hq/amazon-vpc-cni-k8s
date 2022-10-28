@@ -29,15 +29,17 @@ func NewIpamServer(masterLink string) *IpamServer {
 	return &IpamServer{masterLink: masterLink}
 }
 
-func (ipam *IpamServer) RunRPCHandler(version string) error {
+func (ipam *IpamServer) RunRPCHandler(version string, rangeStart net.IP, rangeEnd net.IP) error {
 	listener, err := net.Listen("tcp", ipamdgRPCaddress)
 	if err != nil {
 		fmt.Printf("Failed to listen gRPC port: %v\n", err)
 		return errors.Wrap(err, "ipamd: failed to listen to gRPC port")
 	}
 
+	innerIpam := newInMemoryIpam(rangeStart, rangeEnd)
+
 	grpcServer := grpc.NewServer()
-	rpc.RegisterCNIBackendServer(grpcServer, &rpcHandler{version: version})
+	rpc.RegisterCNIBackendServer(grpcServer, &rpcHandler{version: version, innerIpam: innerIpam})
 	healthServer := health.NewServer()
 	// If ipamd can talk to the API server and to the EC2 API, the pod is healthy.
 	// No need to ever change this to HealthCheckResponse_NOT_SERVING since it's a local service only
